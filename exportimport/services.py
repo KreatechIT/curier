@@ -1109,3 +1109,152 @@ def generate_invoice_pdf(shipment, shipper_name, shipper_address,
     doc.build(elements)
     buffer.seek(0)
     return buffer
+
+
+def generate_packing_list_pdf(shipment, shipper_name, shipper_address, 
+                               consignee_name, consignee_address, line_items):
+    """
+    Generate packing list PDF - Same as invoice but WITHOUT the VALUE column.
+    """
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.lib.units import inch
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=letter,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
+    )
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # ==================== PARAGRAPH STYLES ====================
+    label_style = ParagraphStyle(
+        'Label', parent=styles['Normal'], fontName='Helvetica-Bold', 
+        fontSize=11, alignment=TA_CENTER, spaceBefore=3, spaceAfter=3
+    )
+    center_style = ParagraphStyle(
+        'Center', parent=styles['Normal'], fontName='Helvetica', 
+        fontSize=11, alignment=TA_CENTER, leading=14
+    )
+    left_style = ParagraphStyle(
+        'Left', parent=styles['Normal'], fontName='Helvetica', 
+        fontSize=11, alignment=TA_LEFT, leading=14
+    )
+    sample_style = ParagraphStyle(
+        'Sample', parent=styles['Normal'], fontName='Helvetica-Bold', 
+        fontSize=12, alignment=TA_CENTER
+    )
+    awb_style = ParagraphStyle(
+        'AWB', parent=styles['Normal'], fontName='Helvetica-Bold', 
+        fontSize=20, alignment=TA_CENTER
+    )
+
+    elements.append(Spacer(1, 0.5*inch))
+
+    # ==================== SHIPPER & CONSIGNEE ====================
+    sc_data = [
+        [Paragraph('SHIPPER NAME', label_style), '', Paragraph('CONSIGNEE NAME', label_style)],
+        [Paragraph(shipper_name.replace('\n', '<br/>'), center_style), '', Paragraph(consignee_name.replace('\n', '<br/>'), center_style)],
+        ['', '', ''],
+        [Paragraph('ADDRESS', label_style), '', Paragraph('ADDRESS', label_style)],
+        [Paragraph(shipper_address.replace('\n', '<br/>'), left_style), '', Paragraph(consignee_address.replace('\n', '<br/>'), left_style)]
+    ]
+
+    sc_table = Table(sc_data, colWidths=[3.0*inch, 1.0*inch, 3.0*inch], rowHeights=[None, None, 0.2*inch, None, None])
+    sc_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (0, 0), 1.5, colors.black),
+        ('BOX', (2, 0), (2, 0), 1.5, colors.black),
+        ('BOX', (0, 3), (0, 3), 1.5, colors.black),
+        ('BOX', (2, 3), (2, 3), 1.5, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(sc_table)
+    elements.append(Spacer(1, 0.9*inch))
+
+    # ==================== PRODUCT TABLE (NO VALUE COLUMN) ====================
+    table_data = [
+        ['', 'DESCRIPTION OF GOODS', 'WEIGHT\n(KG)', 'pcs']
+    ]
+
+    for item in line_items:
+        qty = float(item['quantity'])
+        table_data.append([
+            '',
+            str(item['description']).upper(),
+            f"{float(item['weight']):g}KG",
+            f"{int(qty)}PCS"
+        ])
+
+    # Total Row - no value column
+    table_data.append(['TOTAL', '', '', ''])
+
+    product_table = Table(table_data, colWidths=[0.4*inch, 4.2*inch, 1.0*inch, 1.4*inch])
+    
+    product_table.setStyle(TableStyle([
+        ('GRID', (0, 0), (-1, -1), 1.5, colors.black),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('ALIGN', (1, 1), (1, -2), 'LEFT'),
+        ('ALIGN', (2, 1), (-1, -2), 'CENTER'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('SPAN', (0, -1), (2, -1)),
+        ('ALIGN', (0, -1), (0, -1), 'CENTER'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, -1), (-1, -1), 11),
+    ]))
+
+    elements.append(product_table)
+    elements.append(Spacer(1, 0.5*inch))
+
+    # ==================== FOOTER ====================
+    footer_data = [
+        [
+            Paragraph('Sample of no commerical value', sample_style),
+            ''
+        ],
+        [
+            '',
+            ''
+        ],
+        [
+            Paragraph(f'HAWB# {shipment.awb_number}', awb_style),
+            Paragraph('_______________________<br/><font size=11>Authorized Signature</font>', ParagraphStyle(
+                'Signature', parent=styles['Normal'], fontName='Helvetica-Bold', 
+                fontSize=11, alignment=TA_CENTER, leading=12
+            ))
+        ]
+    ]
+    
+    footer_table = Table(footer_data, colWidths=[4.0*inch, 3.0*inch], rowHeights=[None, 0.6*inch, None])
+    footer_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (0, 0), 'TOP'),
+        ('VALIGN', (1, 0), (1, 0), 'TOP'),
+        ('VALIGN', (0, 2), (0, 2), 'BOTTOM'),
+        ('VALIGN', (1, 2), (1, 2), 'BOTTOM'),
+        ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+        ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    
+    elements.append(footer_table)
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer

@@ -995,12 +995,23 @@ def invoice_delete_view(request, shipment_id):
         return redirect('parcel_details', parcel_id=shipment_id)
     
     if request.method == 'POST':
-        # Delete the file from storage
-        shipment.invoice.delete(save=False)
-        shipment.invoice = None
-        shipment.save()
+        # Delete the invoice file from storage
+        if shipment.invoice:
+            invoice_path = shipment.invoice.name
+            shipment.invoice.delete(save=False)
+            
+            # Also delete the packing list file
+            if invoice_path:
+                packing_path = invoice_path.replace('invoice_', 'packing_')
+                try:
+                    shipment.invoice.storage.delete(packing_path)
+                except:
+                    pass  # Packing list might not exist
+            
+            shipment.invoice = None
+            shipment.save()
         
-        messages.success(request, "Invoice deleted successfully")
+        messages.success(request, "Invoice and packing list deleted successfully")
         return redirect('parcel_details', parcel_id=shipment_id)
     
     return render(request, 'exportimport/invoice_delete_confirm.html', {
@@ -1036,14 +1047,51 @@ def invoice_download_view(request, shipment_id):
 
 
 @login_required(login_url='login')
+def packing_list_download_view(request, shipment_id):
+    """
+    Serve packing list file for download.
+    Staff: always allowed
+    Customer: only when shipment status is BOOKED or later
+    """
+    shipment = get_object_or_404(Shipment, id=shipment_id)
+    
+    # Check if user has access to this shipment
+    if not request.user.is_staff and shipment.customer.user != request.user:
+        return HttpResponseForbidden("You don't have permission to access this shipment")
+    
+    # Check if invoice exists (packing list is generated with invoice)
+    if not shipment.invoice:
+        raise Http404("Packing list not found")
+    
+    # Permission check for customers
+    if not request.user.is_staff and shipment.current_status == 'PENDING':
+        return HttpResponseForbidden("Packing list not available for pending shipments")
+    
+    # Get packing list path
+    invoice_path = shipment.invoice.name
+    packing_path = invoice_path.replace('invoice_', 'packing_')
+    
+    # Check if packing list exists
+    if not shipment.invoice.storage.exists(packing_path):
+        raise Http404("Packing list not found")
+    
+    # Serve the file
+    packing_file = shipment.invoice.storage.open(packing_path, 'rb')
+    response = FileResponse(packing_file)
+    response['Content-Disposition'] = f'attachment; filename="packing_{shipment.awb_number}.pdf"'
+    return response
+
+
+@login_required(login_url='login')
 def invoice_generate_view(request, shipment_id):
     """
     Generate a commercial invoice PDF for a shipment.
     Returns JSON for AJAX requests.
     """
     from .forms import InvoiceGenerationForm, ProductLineItemFormSet
-    from .services import generate_invoice_pdf
+    from .services import generate_invoice_pdf, generate_packing_list_pdf
     from django.core.files.base import ContentFile
+    import os
     
     shipment = get_object_or_404(Shipment, id=shipment_id)
     
@@ -1083,15 +1131,28 @@ def invoice_generate_view(request, shipment_id):
                             'unit_value': item_form.cleaned_data['unit_value'],
                         })
                 
-                # Generate PDF
+                # Generate Invoice PDF
                 pdf_buffer = generate_invoice_pdf(
                     shipment, shipper_name, shipper_address,
                     consignee_name, consignee_address, line_items
                 )
                 
-                # Save to shipment
-                filename = f"invoice_{shipment.awb_number}.pdf"
-                shipment.invoice.save(filename, ContentFile(pdf_buffer.getvalue()), save=True)
+                # Generate Packing List PDF (without prices)
+                packing_buffer = generate_packing_list_pdf(
+                    shipment, shipper_name, shipper_address,
+                    consignee_name, consignee_address, line_items
+                )
+                
+                # Save Invoice PDF
+                invoice_filename = f"invoice_{shipment.awb_number}.pdf"
+                shipment.invoice.save(invoice_filename, ContentFile(pdf_buffer.getvalue()), save=False)
+                
+                # Save Packing List PDF in the same directory
+                packing_filename = f"packing_{shipment.awb_number}.pdf"
+                packing_path = os.path.join(os.path.dirname(shipment.invoice.name), packing_filename)
+                shipment.invoice.storage.save(packing_path, ContentFile(packing_buffer.getvalue()))
+                
+                shipment.save()
                 
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({

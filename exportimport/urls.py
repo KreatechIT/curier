@@ -45,6 +45,7 @@ urlpatterns = [
     path('invoice/<int:shipment_id>/generate/', views.invoice_generate_view, name='invoice_generate'),
     path('invoice/<int:shipment_id>/delete/', views.invoice_delete_view, name='invoice_delete'),
     path('invoice/<int:shipment_id>/download/', views.invoice_download_view, name='invoice_download'),
+    path('packing-list/<int:shipment_id>/download/', views.packing_list_download_view, name='packing_list_download'),
     
     # Bag Management (Staff)
     path('bags/', views.bags_view, name='bags'),
