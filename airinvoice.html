@@ -119,8 +119,30 @@
 
         /* Footer Section */
         .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 40px;
+            min-height: 120px;
+        }
+
+        .footer-left {
+            flex: 1;
             text-align: center;
-            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
+        }
+
+        .footer-right {
+            flex: 1;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
         }
 
         .footer-note {
@@ -132,6 +154,28 @@
         .awb-number {
             font-weight: bold;
             font-size: 20px;
+        }
+
+        .signature-section {
+            text-align: center;
+        }
+
+        .signature-label {
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 80px;
+        }
+
+        .signature-line {
+            border-top: 1px solid black;
+            width: 200px;
+            margin: 0 auto 2px auto;
+        }
+
+        .signature-text {
+            font-size: 11px;
+            font-weight: bold;
+            margin: 0;
         }
     </style>
 </head>
@@ -166,8 +210,6 @@
             </div>
         </div>
 
-        <div class="main-title">INVOICE and PACKING LIST</div>
-
         <table>
             <thead>
                 <tr>
@@ -194,8 +236,16 @@
         </table>
 
         <div class="footer">
-            <div class="footer-note">NO COMMERCIAL INVOICE VALUE</div>
-            <div class="awb-number">AWB# 8523144375</div>
+            <div class="footer-left">
+                <div class="footer-note">NO COMMERCIAL INVOICE VALUE</div>
+                <div class="awb-number">HAWB# 8523144375</div>
+            </div>
+            <div class="footer-right">
+                <div class="signature-section">
+                    <div class="signature-line"></div>
+                    <div class="signature-text">Authorized Signature</div>
+                </div>
+            </div>
         </div>
 
     </div>

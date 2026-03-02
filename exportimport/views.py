@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponseForbidden, FileResponse, Http404
+from django.http import JsonResponse, HttpResponseForbidden, FileResponse, Http404, HttpResponse
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -364,6 +364,12 @@ def all_shipments(request):
     search = request.GET.get('search', '')
     customer_id = request.GET.get('customer', '')
     status = request.GET.get('status', '')
+    direction = request.GET.get('direction', '')
+    recipient_name = request.GET.get('recipient_name', '')
+    recipient_phone = request.GET.get('recipient_phone', '')
+    shipper_name = request.GET.get('shipper_name', '')
+    shipper_phone = request.GET.get('shipper_phone', '')
+    payment_status = request.GET.get('payment_status', '')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     
@@ -372,6 +378,7 @@ def all_shipments(request):
     
     # Apply filters
     if search:
+        # Search in AWB number
         shipments = shipments.filter(awb_number__icontains=search)
     
     if customer_id:
@@ -380,11 +387,35 @@ def all_shipments(request):
     if status:
         shipments = shipments.filter(current_status=status)
     
+    if direction:
+        shipments = shipments.filter(direction=direction)
+    
+    if recipient_name:
+        shipments = shipments.filter(recipient_name__icontains=recipient_name)
+    
+    if recipient_phone:
+        shipments = shipments.filter(recipient_phone__icontains=recipient_phone)
+    
+    if shipper_name:
+        shipments = shipments.filter(shipper_name__icontains=shipper_name)
+    
+    if shipper_phone:
+        shipments = shipments.filter(shipper_phone__icontains=shipper_phone)
+    
+    if payment_status:
+        shipments = shipments.filter(payment_status=payment_status)
+    
     if date_from:
         shipments = shipments.filter(created_at__gte=date_from)
     
     if date_to:
-        shipments = shipments.filter(created_at__lte=date_to)
+        # Add one day to include the entire end date
+        from datetime import datetime, timedelta
+        try:
+            end_date = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+            shipments = shipments.filter(created_at__lt=end_date)
+        except ValueError:
+            pass
     
     # Get all customers for filter dropdown
     customers = Customer.objects.all().order_by('name')
@@ -402,9 +433,17 @@ def all_shipments(request):
         'search': search,
         'selected_customer': customer_id,
         'selected_status': status,
+        'selected_direction': direction,
+        'recipient_name': recipient_name,
+        'recipient_phone': recipient_phone,
+        'shipper_name': shipper_name,
+        'shipper_phone': shipper_phone,
+        'selected_payment_status': payment_status,
         'date_from': date_from,
         'date_to': date_to,
         'status_choices': Shipment.STATUS_CHOICES,
+        'direction_choices': Shipment.DIRECTION_CHOICES,
+        'payment_status_choices': Shipment.PAYMENT_STATUS_CHOICES,
     }
     return render(request, 'exportimport/shipments.html', context)
 
@@ -1839,6 +1878,103 @@ def generate_empty_hawb(request):
         return JsonResponse({
             'success': False,
             'error': str(e)
+        }, status=500)
+
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+def generate_bulk_empty_hawb(request):
+    """Generate multiple empty HAWBs and return a combined PDF"""
+    try:
+        # Only staff can generate empty HAWBs
+        if not request.user.is_staff:
+            return JsonResponse({
+                'success': False,
+                'error': 'Only staff can generate empty HAWBs'
+            }, status=403)
+        
+        # Get quantity from request
+        try:
+            data = json.loads(request.body)
+            quantity = int(data.get('quantity', 1))
+        except (json.JSONDecodeError, ValueError) as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid request data: {str(e)}'
+            }, status=400)
+        
+        # Validate quantity (max 200)
+        if quantity < 1 or quantity > 200:
+            return JsonResponse({
+                'success': False,
+                'error': 'Quantity must be between 1 and 200'
+            }, status=400)
+        
+        # Generate empty shipments
+        shipments = []
+        try:
+            for i in range(quantity):
+                shipment = Shipment.objects.create(
+                    direction=None,
+                    current_status='BOOKED',
+                    booked_by=request.user,
+                    shipper_name='',
+                    shipper_phone='',
+                    shipper_address='',
+                    shipper_country='',
+                    recipient_name='',
+                    recipient_phone='',
+                    recipient_address='',
+                    recipient_country='',
+                    contents='',
+                    declared_value=None,
+                    weight_estimated=None,
+                    quantity=None
+                )
+                
+                TrackingEvent.objects.create(
+                    shipment=shipment,
+                    status='BOOKED',
+                    description=f'Empty HAWB generated in bulk (batch of {quantity})',
+                    location='Bangladesh Warehouse',
+                    updated_by=request.user
+                )
+                
+                shipments.append(shipment)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error creating shipments: {str(e)}'
+            }, status=500)
+        
+        # Render HTML with all invoices
+        try:
+            from django.template.loader import render_to_string
+            html_content = render_to_string('exportimport/bulk_invoice.html', {
+                'shipments': shipments,
+                'logo_path': request.build_absolute_uri('/static/cropedlogo.png'),
+            })
+        except Exception as e:
+            import traceback
+            return JsonResponse({
+                'success': False,
+                'error': f'Error rendering template: {str(e)}',
+                'traceback': traceback.format_exc()
+            }, status=500)
+        
+        # Return HTML response that can be printed to PDF by browser
+        response = HttpResponse(html_content, content_type='text/html')
+        
+        return response
+    
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error in generate_bulk_empty_hawb: {error_details}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'details': error_details
         }, status=500)
 
 

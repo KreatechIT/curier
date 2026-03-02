@@ -353,7 +353,23 @@ function openInvoiceGenerateModal(shipmentId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            document.getElementById('invoiceGenerateModalBody').innerHTML = data.html;
+            const modalBody = document.getElementById('invoiceGenerateModalBody');
+            modalBody.innerHTML = data.html;
+            
+            // Execute scripts in the loaded content
+            const scripts = modalBody.querySelectorAll('script');
+            scripts.forEach(script => {
+                const newScript = document.createElement('script');
+                if (script.src) {
+                    newScript.src = script.src;
+                } else {
+                    newScript.textContent = script.textContent;
+                }
+                document.body.appendChild(newScript);
+                // Remove after execution to avoid duplicates
+                setTimeout(() => newScript.remove(), 100);
+            });
+            
             showModal('invoiceGenerateModal');
         } else {
             showToast(data.error || 'Error loading form', 'error');

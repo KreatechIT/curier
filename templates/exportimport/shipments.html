@@ -17,10 +17,11 @@
 <div class="card mb-6">
     <div class="card-body p-4">
         <form method="GET" class="space-y-4">
-            <!-- Search and Quick Filters -->
+            <!-- Row 1: AWB, Customer, Status, Direction -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <!-- Search -->
+                <!-- Search AWB -->
                 <div>
+                    <label class="block text-xs text-gray-500 mb-1">AWB Number</label>
                     <input 
                         type="text" 
                         name="search" 
@@ -32,6 +33,7 @@
                 
                 <!-- Customer Filter -->
                 <div>
+                    <label class="block text-xs text-gray-500 mb-1">Customer</label>
                     <select name="customer" class="form-input text-sm">
                         <option value="">All Customers</option>
                         {% for customer in customers %}
@@ -44,30 +46,34 @@
                 
                 <!-- Status Filter -->
                 <div>
+                    <label class="block text-xs text-gray-500 mb-1">Status</label>
                     <select name="status" class="form-input text-sm">
                         <option value="">All Status</option>
-                        <option value="PENDING" {% if selected_status == 'PENDING' %}selected{% endif %}>Pending</option>
-                        <option value="BOOKED" {% if selected_status == 'BOOKED' %}selected{% endif %}>Booked</option>
-                        <option value="RECEIVED_AT_BD" {% if selected_status == 'RECEIVED_AT_BD' %}selected{% endif %}>Received at BD</option>
-                        <option value="ARRIVED_AT_HK" {% if selected_status == 'ARRIVED_AT_HK' %}selected{% endif %}>Arrived at HK</option>
-                        <option value="DELIVERED" {% if selected_status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
-                        <option value="DELIVERED_IN_HK" {% if selected_status == 'DELIVERED_IN_HK' %}selected{% endif %}>Delivered in HK</option>
+                        {% for status_code, status_label in status_choices %}
+                        <option value="{{ status_code }}" {% if selected_status == status_code %}selected{% endif %}>
+                            {{ status_label }}
+                        </option>
+                        {% endfor %}
                     </select>
                 </div>
                 
-                <!-- Search Button -->
+                <!-- Direction Filter -->
                 <div>
-                    <button type="submit" class="w-full btn btn-primary flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                        <span>Search</span>
-                    </button>
+                    <label class="block text-xs text-gray-500 mb-1">Direction</label>
+                    <select name="direction" class="form-input text-sm">
+                        <option value="">All Directions</option>
+                        {% for dir_code, dir_label in direction_choices %}
+                        <option value="{{ dir_code }}" {% if selected_direction == dir_code %}selected{% endif %}>
+                            {{ dir_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
             
-            <!-- Date Range Filter -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- Row 2: Date From, Date To -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Date From -->
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">From Date</label>
                     <input 
@@ -77,6 +83,8 @@
                         class="form-input text-sm"
                     >
                 </div>
+                
+                <!-- Date To -->
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">To Date</label>
                     <input 
@@ -86,15 +94,129 @@
                         class="form-input text-sm"
                     >
                 </div>
-                <div class="flex items-end">
-                    <a href="{% url 'all_shipments' %}" class="w-full btn btn-secondary text-sm">
-                        Clear Filters
-                    </a>
+            </div>
+            
+            <!-- Advanced Filters Toggle -->
+            <div class="border-t pt-3">
+                <button type="button" onclick="toggleAdvancedFilters()" class="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2">
+                    <svg id="advancedFilterIcon" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                    <span class="font-medium">Advanced Filters</span>
+                </button>
+            </div>
+            
+            <!-- Advanced Filters Section (Hidden by default) -->
+            <div id="advancedFilters" class="hidden space-y-3 pt-2">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <!-- Recipient Name -->
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Recipient Name</label>
+                        <input 
+                            type="text" 
+                            name="recipient_name" 
+                            value="{{ recipient_name }}"
+                            placeholder="Recipient name..."
+                            class="form-input text-sm"
+                        >
+                    </div>
+                    
+                    <!-- Recipient Phone -->
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Recipient Phone</label>
+                        <input 
+                            type="text" 
+                            name="recipient_phone" 
+                            value="{{ recipient_phone }}"
+                            placeholder="Recipient phone..."
+                            class="form-input text-sm"
+                        >
+                    </div>
+                    
+                    <!-- Sender Name -->
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Sender Name</label>
+                        <input 
+                            type="text" 
+                            name="shipper_name" 
+                            value="{{ shipper_name }}"
+                            placeholder="Sender name..."
+                            class="form-input text-sm"
+                        >
+                    </div>
                 </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <!-- Sender Phone -->
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Sender Phone</label>
+                        <input 
+                            type="text" 
+                            name="shipper_phone" 
+                            value="{{ shipper_phone }}"
+                            placeholder="Sender phone..."
+                            class="form-input text-sm"
+                        >
+                    </div>
+                    
+                    <!-- Payment Status -->
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Payment Status</label>
+                        <select name="payment_status" class="form-input text-sm">
+                            <option value="">All Payment Status</option>
+                            {% for payment_code, payment_label in payment_status_choices %}
+                            <option value="{{ payment_code }}" {% if selected_payment_status == payment_code %}selected{% endif %}>
+                                {{ payment_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+                <button type="submit" class="btn btn-primary flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <span>Search</span>
+                </button>
+                <a href="{% url 'all_shipments' %}" class="btn btn-secondary">
+                    Clear Filters
+                </a>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+function toggleAdvancedFilters() {
+    const advancedFilters = document.getElementById('advancedFilters');
+    const icon = document.getElementById('advancedFilterIcon');
+    
+    if (advancedFilters.classList.contains('hidden')) {
+        advancedFilters.classList.remove('hidden');
+        icon.classList.add('rotate-180');
+    } else {
+        advancedFilters.classList.add('hidden');
+        icon.classList.remove('rotate-180');
+    }
+}
+
+// Auto-expand advanced filters if any advanced filter has a value
+document.addEventListener('DOMContentLoaded', function() {
+    const recipientName = '{{ recipient_name }}';
+    const recipientPhone = '{{ recipient_phone }}';
+    const shipperName = '{{ shipper_name }}';
+    const shipperPhone = '{{ shipper_phone }}';
+    const paymentStatus = '{{ selected_payment_status }}';
+    
+    if (recipientName || recipientPhone || shipperName || shipperPhone || paymentStatus) {
+        toggleAdvancedFilters();
+    }
+});
+</script>
 
 <!-- Results Count -->
 <div class="mb-4">
@@ -123,7 +245,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     {% for ship in shipments %}
-                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="loadShipmentDetails({{ ship.id }})">>
+                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="loadShipmentDetails({{ ship.id }})">
                         <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ ship.awb_number|default:"—" }}</td>
                         <td class="px-4 py-3">
                             <span class="status-badge status-{{ ship.current_status|lower }} text-xs">

@@ -1,4 +1,5 @@
 <!-- Modal content only (no wrapper) -->
+
 <form method="post" id="invoiceGenerateForm" action="{% url 'invoice_generate' shipment.id %}">
     {% csrf_token %}
     
@@ -6,31 +7,31 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
         <!-- Shipper Column -->
         <div>
-            <h3 class="text-xs font-semibold text-gray-700 mb-2">Shipper</h3>
+            <h3 class="text-xs font-semibold text-gray-700 mb-2">Shipper (Editable)</h3>
             
             <div class="mb-2">
                 <label class="block text-xs text-gray-500 mb-1">Name <span class="text-red-500">*</span></label>
-                {{ form.shipper_name }}
+                <input type="text" name="shipper_name" value="{{ form.shipper_name.value|default:'' }}" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>
             </div>
             
             <div>
                 <label class="block text-xs text-gray-500 mb-1">Address <span class="text-red-500">*</span></label>
-                {{ form.shipper_address }}
+                <textarea name="shipper_address" rows="3" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>{{ form.shipper_address.value|default:'' }}</textarea>
             </div>
         </div>
         
         <!-- Consignee Column -->
         <div>
-            <h3 class="text-xs font-semibold text-gray-700 mb-2">Consignee</h3>
+            <h3 class="text-xs font-semibold text-gray-700 mb-2">Consignee (Editable)</h3>
             
             <div class="mb-2">
                 <label class="block text-xs text-gray-500 mb-1">Name <span class="text-red-500">*</span></label>
-                {{ form.consignee_name }}
+                <input type="text" name="consignee_name" value="{{ form.consignee_name.value|default:'' }}" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>
             </div>
             
             <div>
                 <label class="block text-xs text-gray-500 mb-1">Address <span class="text-red-500">*</span></label>
-                {{ form.consignee_address }}
+                <textarea name="consignee_address" rows="3" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>{{ form.consignee_address.value|default:'' }}</textarea>
             </div>
         </div>
     </div>
@@ -39,7 +40,7 @@
     <div class="mb-4">
         <div class="flex items-center justify-between mb-2">
             <h3 class="text-xs font-semibold text-gray-700">Products</h3>
-            <button type="button" id="addInvoiceItemBtn" class="text-xs text-blue-600 hover:text-blue-700 font-medium">+ Add</button>
+            <button type="button" id="addInvoiceItemBtn" data-action="add-item" class="text-xs text-blue-600 hover:text-blue-700 font-medium">+ Add</button>
         </div>
         
         {{ formset.management_form }}
@@ -81,140 +82,153 @@
 </form>
 
 <script>
-(function() {
-    console.log('Invoice modal script loaded');
+// Initialize invoice form - This WILL execute when loaded via AJAX
+(function initInvoiceForm() {
+    console.log('=== Invoice form initialization started ===');
     
-    const form = document.getElementById('invoiceGenerateForm');
-    const container = document.getElementById('invoiceItemsContainer');
-    const addBtn = document.getElementById('addInvoiceItemBtn');
-    const totalForms = document.querySelector('[name$="-TOTAL_FORMS"]');
-    
-    if (!form || !container || !addBtn || !totalForms) {
-        console.error('Invoice form elements not found');
-        return;
-    }
-    
-    // Set initial count to 1
-    totalForms.value = 1;
     let itemCount = 1;
+    const currency = '{{ shipment.declared_currency|default:"USD" }}';
     
-    console.log('Invoice form initialized');
-    
-    // Add item button
-    addBtn.onclick = function(e) {
-        e.preventDefault();
-        console.log('Add item clicked, current count:', itemCount);
+    // Wait a moment for DOM to be ready
+    setTimeout(function() {
+        const form = document.getElementById('invoiceGenerateForm');
+        const container = document.getElementById('invoiceItemsContainer');
+        const addBtn = document.getElementById('addInvoiceItemBtn');
+        const totalForms = document.querySelector('[name$="-TOTAL_FORMS"]');
         
-        const newItem = document.createElement('div');
-        newItem.className = 'invoice-item-row border border-gray-200 rounded-md p-2 bg-white';
-        newItem.setAttribute('data-index', itemCount);
+        console.log('Form elements:', {form, container, addBtn, totalForms});
         
-        newItem.innerHTML = `
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-gray-600 font-medium">Item ${itemCount + 1}</span>
-                <button type="button" class="remove-invoice-item text-xs text-red-500 hover:text-red-600">Remove</button>
-            </div>
-            
-            <div class="grid grid-cols-12 gap-2">
-                <div class="col-span-12">
-                    <input type="text" name="form-${itemCount}-description" placeholder="Description" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>
-                </div>
-                <div class="col-span-4">
-                    <input type="number" step="0.01" name="form-${itemCount}-weight" placeholder="Weight (kg)" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>
-                </div>
-                <div class="col-span-4">
-                    <input type="number" name="form-${itemCount}-quantity" placeholder="Qty" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>
-                </div>
-                <div class="col-span-4">
-                    <input type="number" step="0.01" name="form-${itemCount}-unit_value" placeholder="Value ({{ shipment.declared_currency }})" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>
-                </div>
-            </div>
-        `;
+        if (!form || !container || !addBtn || !totalForms) {
+            console.error('Required elements not found!');
+            return;
+        }
         
-        container.appendChild(newItem);
-        itemCount++;
-        totalForms.value = itemCount;
+        // Set initial count
+        totalForms.value = 1;
         
-        console.log('Item added, new count:', itemCount);
-    };
-    
-    // Remove item (event delegation)
-    container.onclick = function(e) {
-        if (e.target.classList.contains('remove-invoice-item')) {
+        console.log('Invoice form initialized successfully');
+        
+        // Add button click handler
+        addBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            console.log('Remove item clicked');
+            e.stopPropagation();
+            console.log('=== ADD BUTTON CLICKED ===, count:', itemCount);
             
-            const items = container.querySelectorAll('.invoice-item-row');
-            if (items.length > 1) {
-                e.target.closest('.invoice-item-row').remove();
-                itemCount--;
-                totalForms.value = itemCount;
+            const newItem = document.createElement('div');
+            newItem.className = 'invoice-item-row border border-gray-200 rounded-md p-2 bg-white';
+            newItem.setAttribute('data-index', itemCount);
+            
+            newItem.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-gray-600 font-medium">Item ${itemCount + 1}</span>
+                    <button type="button" class="remove-invoice-item text-xs text-red-500 hover:text-red-600" data-action="remove-item">Remove</button>
+                </div>
                 
-                console.log('Item removed, new count:', itemCount);
+                <div class="grid grid-cols-12 gap-2">
+                    <div class="col-span-12">
+                        <input type="text" name="form-${itemCount}-description" placeholder="Description" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>
+                    </div>
+                    <div class="col-span-4">
+                        <input type="number" step="0.01" min="0.01" name="form-${itemCount}-weight" placeholder="Weight (kg)" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>
+                    </div>
+                    <div class="col-span-4">
+                        <input type="number" min="1" name="form-${itemCount}-quantity" placeholder="Qty" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>
+                    </div>
+                    <div class="col-span-4">
+                        <input type="number" step="0.01" min="0.01" name="form-${itemCount}-unit_value" placeholder="Value (${currency})" class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-gray-100 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" required>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(newItem);
+            itemCount++;
+            totalForms.value = itemCount;
+            
+            console.log('Item added! New count:', itemCount);
+        });
+        
+        // Remove button handler (event delegation)
+        container.addEventListener('click', function(e) {
+            const removeBtn = e.target.closest('[data-action="remove-item"]');
+            if (removeBtn) {
+                e.preventDefault();
+                console.log('Remove button clicked');
                 
-                // Renumber items
-                container.querySelectorAll('.invoice-item-row').forEach((item, idx) => {
-                    item.setAttribute('data-index', idx);
-                    const label = item.querySelector('.text-xs.text-gray-600.font-medium');
-                    if (label) label.textContent = 'Item ' + (idx + 1);
+                const items = container.querySelectorAll('.invoice-item-row');
+                if (items.length > 1) {
+                    removeBtn.closest('.invoice-item-row').remove();
+                    itemCount--;
+                    totalForms.value = itemCount;
                     
-                    // Update field names
-                    item.querySelectorAll('input').forEach(field => {
-                        const name = field.getAttribute('name');
-                        if (name) {
-                            const fieldType = name.split('-').pop();
-                            field.setAttribute('name', `form-${idx}-${fieldType}`);
+                    console.log('Item removed, new count:', itemCount);
+                    
+                    // Renumber items
+                    container.querySelectorAll('.invoice-item-row').forEach((item, idx) => {
+                        item.setAttribute('data-index', idx);
+                        const label = item.querySelector('.text-xs.text-gray-600.font-medium');
+                        if (label) label.textContent = 'Item ' + (idx + 1);
+                        
+                        // Update field names
+                        item.querySelectorAll('input').forEach(field => {
+                            const name = field.getAttribute('name');
+                            if (name) {
+                                const fieldType = name.split('-').pop();
+                                field.setAttribute('name', `form-${idx}-${fieldType}`);
+                            }
+                        });
+                        
+                        // Remove "Remove" button from first item
+                        if (idx === 0) {
+                            const removeBtn = item.querySelector('.remove-invoice-item');
+                            if (removeBtn) removeBtn.remove();
                         }
                     });
-                    
-                    // Remove "Remove" button from first item
-                    if (idx === 0) {
-                        const removeBtn = item.querySelector('.remove-invoice-item');
-                        if (removeBtn) removeBtn.remove();
-                    }
-                });
-            }
-        }
-    };
-    
-    // Form submission
-    form.onsubmit = function(e) {
-        e.preventDefault();
-        console.log('Form submitted');
-        
-        const formData = new FormData(form);
-        const errorDiv = document.getElementById('invoiceFormErrors');
-        
-        // Hide previous errors
-        errorDiv.classList.add('hidden');
-        
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Response:', data);
-            if (data.success) {
-                closeModal('invoiceGenerateModal');
-                if (typeof showToast === 'function') {
-                    showToast('Invoice generated successfully', 'success');
                 }
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                errorDiv.textContent = data.error || 'Error generating invoice';
-                errorDiv.classList.remove('hidden');
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            errorDiv.textContent = 'Error: ' + error.message;
-            errorDiv.classList.remove('hidden');
         });
-    };
+        
+        // Form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Form submitted');
+            
+            const formData = new FormData(form);
+            const errorDiv = document.getElementById('invoiceFormErrors');
+            
+            // Hide previous errors
+            errorDiv.classList.add('hidden');
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Response:', data);
+                if (data.success) {
+                    if (typeof closeModal === 'function') {
+                        closeModal('invoiceGenerateModal');
+                    }
+                    if (typeof showToast === 'function') {
+                        showToast('Invoice generated successfully', 'success');
+                    }
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    errorDiv.textContent = data.error || 'Error generating invoice';
+                    errorDiv.classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.classList.remove('hidden');
+            });
+        });
+        
+    }, 50);
 })();
 </script>

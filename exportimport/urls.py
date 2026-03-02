@@ -25,6 +25,7 @@ urlpatterns = [
     path('parcels/', views.parcel_booking, name='parcel_booking'),
     path('parcels/create/', views.create_parcel, name='create_parcel'),
     path('parcels/generate-empty-hawb/', views.generate_empty_hawb, name='generate_empty_hawb'),
+    path('parcels/generate-bulk-empty-hawb/', views.generate_bulk_empty_hawb, name='generate_bulk_empty_hawb'),
     path('parcels/<int:parcel_id>/', views.get_parcel, name='get_parcel'),
     path('parcels/<int:parcel_id>/details/', views.parcel_details, name='parcel_details'),
     path('parcels/<int:parcel_id>/update/', views.update_parcel, name='update_parcel'),

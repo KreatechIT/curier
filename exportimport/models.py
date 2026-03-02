@@ -192,7 +192,7 @@ class Shipment(models.Model):
         
         if not self.awb_number and self.current_status != 'PENDING':
             date_str = timezone.now().strftime('%Y%m%d')
-            random_num = str(uuid.uuid4().int)[:5]
+            random_num = str(uuid.uuid4().int)[:7]
             
             if self.direction == 'BD_TO_HK':
                 self.awb_number = f"DH{date_str}{random_num}"

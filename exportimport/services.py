@@ -1012,11 +1012,7 @@ def generate_invoice_pdf(shipment, shipper_name, shipper_address,
         ('TOPPADDING', (0, 0), (-1, -1), 4),
     ]))
     elements.append(sc_table)
-    elements.append(Spacer(1, 0.6*inch))
-
-    # ==================== TITLE ====================
-    elements.append(Paragraph('INVOICE and PACKING LIST', title_style))
-    elements.append(Spacer(1, 0.3*inch))
+    elements.append(Spacer(1, 0.9*inch))
 
     # ==================== PRODUCT TABLE ====================
     table_data = [
@@ -1071,12 +1067,44 @@ def generate_invoice_pdf(shipment, shipper_name, shipper_address,
     ]))
 
     elements.append(product_table)
-    elements.append(Spacer(1, 0.6*inch))
+    elements.append(Spacer(1, 0.5*inch))
 
     # ==================== FOOTER ====================
-    elements.append(Paragraph('Sample of no commerical value', sample_style))
-    elements.append(Spacer(1, 0.8*inch))
-    elements.append(Paragraph(f'AWB# {shipment.awb_number}', awb_style))
+    # Create signature style with line above text
+    signature_style = ParagraphStyle(
+        'Signature', parent=styles['Normal'], fontName='Helvetica-Bold', 
+        fontSize=11, alignment=TA_CENTER, leading=12
+    )
+    
+    # Footer layout: Left side (Sample text + HAWB), Right side (Signature box)
+    footer_data = [
+        [
+            Paragraph('Sample of no commerical value', sample_style),
+            ''
+        ],
+        [
+            '',
+            ''
+        ],
+        [
+            Paragraph(f'HAWB# {shipment.awb_number}', awb_style),
+            Paragraph('_______________________<br/><font size=11>Authorized Signature</font>', signature_style)
+        ]
+    ]
+    
+    footer_table = Table(footer_data, colWidths=[4.0*inch, 3.0*inch], rowHeights=[None, 0.6*inch, None])
+    footer_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (0, 0), 'TOP'),     # Sample text at top
+        ('VALIGN', (1, 0), (1, 0), 'TOP'),     # Empty at top
+        ('VALIGN', (0, 2), (0, 2), 'BOTTOM'),  # HAWB at bottom
+        ('VALIGN', (1, 2), (1, 2), 'BOTTOM'),  # Signature line at bottom
+        ('ALIGN', (0, 0), (0, -1), 'CENTER'),  # Left column centered
+        ('ALIGN', (1, 0), (1, -1), 'CENTER'),  # Right column centered
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    
+    elements.append(footer_table)
 
     doc.build(elements)
     buffer.seek(0)
