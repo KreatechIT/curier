@@ -184,12 +184,12 @@ class ShipmentAdmin(ModelAdmin):
     change_form_template = 'admin/exportimport/shipment_change_form.html'
 
     list_display = [
-        'awb_number', 'direction', 'customer', 'recipient_name',
+        'awb_number', 'source', 'direction', 'customer', 'recipient_name',
         'current_status', 'service_type', 'payment_status', 'created_at', 'book_action'
     ]
 
     list_filter = [
-        'current_status', 'direction', 'service_type', 'payment_status',
+        'current_status', 'source', 'direction', 'service_type', 'payment_status',
         'payment_method', 'is_fragile', 'is_liquid', 'is_cod', 'created_at'
     ]
 
@@ -290,11 +290,11 @@ class ShipmentAdmin(ModelAdmin):
         # ---------------- TAB 1: BASIC INFORMATION ----------------
         (_('Basic Information'), {
             'fields': (
-                ('awb_number', 'direction', 'customer'),
+                ('awb_number', 'source', 'direction', 'customer'),
                 ('current_status','declared_value', 'weight_estimated'),
                 ('quantity',),
                 ('contents',),
-                
+
             ),
             'classes': ['tab'],
         }),

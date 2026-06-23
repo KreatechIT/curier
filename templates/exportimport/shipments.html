@@ -246,7 +246,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tbody class="divide-y divide-gray-200">
                     {% for ship in shipments %}
                     <tr class="hover:bg-gray-50 cursor-pointer" onclick="loadShipmentDetails({{ ship.id }})">
-                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ ship.awb_number|default:"—" }}</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">
+                            {{ ship.awb_number|default:"—" }}
+                            {% if ship.source == 2 %}
+                            <span class="inline-block ml-1 px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800 rounded">3rd Party</span>
+                            {% endif %}
+                        </td>
                         <td class="px-4 py-3">
                             <span class="status-badge status-{{ ship.current_status|lower }} text-xs">
                                 {{ ship.get_current_status_display }}
@@ -314,7 +319,10 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="bg-white p-4 border-b border-gray-100">
                 <div class="text-center mb-4">
                     <p class="text-xs text-gray-500 mb-1">AWB Number</p>
-                    <p class="text-xl font-bold text-gray-900" id="modalAwbNum"></p>
+                    <p class="text-xl font-bold text-gray-900">
+                        <span id="modalAwbNum"></span>
+                        <span id="modalThirdPartyBadge" class="inline-block ml-1 px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800 rounded align-middle hidden">3rd Party</span>
+                    </p>
                 </div>
                 
                 <div class="flex items-center justify-center mb-4">
@@ -511,7 +519,8 @@ function displayShipmentDetails(data) {
     currentShipmentData = s;
     
     document.getElementById('modalAwbNum').textContent = s.awb_number;
-    
+    document.getElementById('modalThirdPartyBadge').classList.toggle('hidden', s.source !== 2);
+
     let statusClass = 'status-pending';
     if (s.current_status === 'BOOKED') statusClass = 'status-booked';
     else if (s.current_status === 'DELIVERED' || s.current_status === 'DELIVERED_IN_HK') statusClass = 'status-delivered';

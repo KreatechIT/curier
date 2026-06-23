@@ -24,6 +24,7 @@ urlpatterns = [
     # Parcel Booking (Non-Staff)
     path('parcels/', views.parcel_booking, name='parcel_booking'),
     path('parcels/create/', views.create_parcel, name='create_parcel'),
+    path('parcels/create-third-party/', views.create_third_party_hawb, name='create_third_party_hawb'),
     path('parcels/generate-empty-hawb/', views.generate_empty_hawb, name='generate_empty_hawb'),
     path('parcels/generate-bulk-empty-hawb/', views.generate_bulk_empty_hawb, name='generate_bulk_empty_hawb'),
     path('parcels/<int:parcel_id>/', views.get_parcel, name='get_parcel'),
