@@ -3,9 +3,9 @@
 
 // Per-destination status codes/labels for the leg after the parcel leaves Bangladesh
 const DESTINATION_CONFIG = {
-    'BD_TO_HK': { arrived: 'ARRIVED_AT_HK', arrivedLabel: 'Flight Landed in HK', warehouse: 'RECEIVED_AT_HK_WAREHOUSE', warehouseLabel: 'Received in HK Warehouse', outForDelivery: 'OUT_FOR_DELIVERY_HK', outForDeliveryLabel: 'On the Way to Delivery' },
-    'BD_TO_UK': { arrived: 'ARRIVED_AT_UK', arrivedLabel: 'Flight Landed in UK', warehouse: 'RECEIVED_AT_UK_WAREHOUSE', warehouseLabel: 'Received in UK Warehouse', outForDelivery: 'OUT_FOR_DELIVERY_UK', outForDeliveryLabel: 'On the Way to Delivery' },
-    'BD_TO_CN': { arrived: 'ARRIVED_AT_CN', arrivedLabel: 'Flight Landed in China', warehouse: 'RECEIVED_AT_CN_WAREHOUSE', warehouseLabel: 'Received in China Warehouse', outForDelivery: 'OUT_FOR_DELIVERY_CN', outForDeliveryLabel: 'On the Way to Delivery' },
+    'BD_TO_HK': { inTransit: 'IN_TRANSIT_TO_HK', inTransitLabel: 'In Flight to HK', arrived: 'ARRIVED_AT_HK', arrivedLabel: 'Flight Landed in HK', warehouse: 'RECEIVED_AT_HK_WAREHOUSE', warehouseLabel: 'Received in HK Warehouse', outForDelivery: 'OUT_FOR_DELIVERY_HK', outForDeliveryLabel: 'On the Way to Delivery' },
+    'BD_TO_UK': { inTransit: 'IN_TRANSIT_TO_UK', inTransitLabel: 'In Flight to UK', arrived: 'ARRIVED_AT_UK', arrivedLabel: 'Flight Landed in UK', warehouse: 'RECEIVED_AT_UK_WAREHOUSE', warehouseLabel: 'Received in UK Warehouse', outForDelivery: 'OUT_FOR_DELIVERY_UK', outForDeliveryLabel: 'On the Way to Delivery' },
+    'BD_TO_CN': { inTransit: 'IN_TRANSIT_TO_CN', inTransitLabel: 'In Flight to China', arrived: 'ARRIVED_AT_CN', arrivedLabel: 'Flight Landed in China', warehouse: 'RECEIVED_AT_CN_WAREHOUSE', warehouseLabel: 'Received in China Warehouse', outForDelivery: 'OUT_FOR_DELIVERY_CN', outForDeliveryLabel: 'On the Way to Delivery' },
 };
 
 function getRoleButtons(directionCode) {
@@ -42,6 +42,7 @@ function getRoleButtons(directionCode) {
     // HK group users: Show destination-side buttons + Delivery Proof
     else if (userRole.includes('HK_')) {
         buttons.push(
+            { status: dest.inTransit, label: dest.inTransitLabel, icon: airportIcon },
             { status: dest.arrived, label: dest.arrivedLabel, icon: receivedIcon },
             { status: dest.warehouse, label: dest.warehouseLabel, icon: warehouseIcon },
             { status: dest.outForDelivery, label: dest.outForDeliveryLabel, icon: airportIcon }
@@ -53,6 +54,7 @@ function getRoleButtons(directionCode) {
         buttons.push(
             { status: 'RECEIVED_AT_BD', label: 'Received in BD Warehouse', icon: warehouseIcon },
             { status: 'HANDED_TO_AIRLINE', label: 'Received in BD Airport', icon: airportIcon },
+            { status: dest.inTransit, label: dest.inTransitLabel, icon: airportIcon },
             { status: dest.arrived, label: dest.arrivedLabel, icon: receivedIcon },
             { status: dest.warehouse, label: dest.warehouseLabel, icon: warehouseIcon },
             { status: dest.outForDelivery, label: dest.outForDeliveryLabel, icon: airportIcon }
