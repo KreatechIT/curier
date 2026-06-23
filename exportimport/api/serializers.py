@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from exportimport.models import Shipment, TrackingEvent, Bag
+from exportimport.views import get_next_actions
 
 
 class ShipmentSerializer(serializers.ModelSerializer):
@@ -83,50 +84,12 @@ class ShipmentDetailSerializer(serializers.ModelSerializer):
         return obj.get_barcode_url()
     
     def get_next_actions(self, obj):
-        """Get valid next status options based on current status and direction"""
-        current = obj.current_status
-        direction = obj.direction
-        
-        # BD → HK workflow
-        if direction == 'BD_TO_HK':
-            actions = {
-                'BOOKED': ['RECEIVED_AT_BD'],
-                'RECEIVED_AT_BD': ['READY_FOR_SORTING'],
-                'READY_FOR_SORTING': ['BAGGED_FOR_EXPORT'],
-                'BAGGED_FOR_EXPORT': ['IN_EXPORT_MANIFEST'],
-                'IN_EXPORT_MANIFEST': ['HANDED_TO_AIRLINE'],
-                'HANDED_TO_AIRLINE': ['IN_TRANSIT_TO_HK'],
-                'IN_TRANSIT_TO_HK': ['ARRIVED_AT_HK'],
-                'ARRIVED_AT_HK': ['DELIVERED_IN_HK'],
-            }
-        # HK → BD workflow
-        else:
-            actions = {
-                'BOOKED': ['IN_TRANSIT_TO_BD'],
-                'IN_TRANSIT_TO_BD': ['ARRIVED_AT_BD'],
-                'ARRIVED_AT_BD': ['CUSTOMS_CLEARANCE_BD'],
-                'CUSTOMS_CLEARANCE_BD': ['CUSTOMS_CLEARED_BD'],
-                'CUSTOMS_CLEARED_BD': ['READY_FOR_DELIVERY'],
-                'READY_FOR_DELIVERY': ['OUT_FOR_DELIVERY'],
-                'OUT_FOR_DELIVERY': ['DELIVERED'],
-            }
-        
-        next_statuses = actions.get(current, [])
-        
-        # Add exception option for all statuses
-        next_statuses.append('EXCEPTION_DAMAGED')
-        next_statuses.append('EXCEPTION_CUSTOMS_HOLD')
-        
-        # Return with display names
-        result = []
-        for status in next_statuses:
-            display = dict(Shipment.STATUS_CHOICES).get(status, status)
-            result.append({
-                'value': status,
-                'label': display
-            })
-        
-        return result
+        """Get valid next status options based on current status and direction.
+
+        Delegates to exportimport.views.get_next_actions so the web view and
+        this API serializer can't drift out of sync with each other again.
+        """
+        return get_next_actions(obj)
 
 
 class UpdateStatusSerializer(serializers.Serializer):

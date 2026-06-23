@@ -508,7 +508,7 @@ async function viewParcel(id) {
             
             let statusClass = 'status-pending';
             if (p.current_status === 'BOOKED') statusClass = 'status-booked';
-            else if (p.current_status === 'DELIVERED' || p.current_status === 'DELIVERED_IN_HK') statusClass = 'status-delivered';
+            else if (['DELIVERED', 'DELIVERED_IN_HK', 'DELIVERED_IN_UK', 'DELIVERED_IN_CN'].includes(p.current_status)) statusClass = 'status-delivered';
             else if (p.current_status !== 'PENDING') statusClass = 'status-transit';
             
             let html = `

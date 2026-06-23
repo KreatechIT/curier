@@ -6,6 +6,7 @@
 {% block extra_head %}
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+<script src="/static/js/shipment_status_buttons.js"></script>
 <style>
     #reader { 
         width: 100% !important; 
@@ -932,7 +933,7 @@ function showShip(data) {
 
     let statusClass = 'status-pending';
     if (s.current_status === 'BOOKED') statusClass = 'status-booked';
-    else if (s.current_status === 'DELIVERED' || s.current_status === 'DELIVERED_IN_HK') statusClass = 'status-delivered';
+    else if (['DELIVERED', 'DELIVERED_IN_HK', 'DELIVERED_IN_UK', 'DELIVERED_IN_CN'].includes(s.current_status)) statusClass = 'status-delivered';
     else if (s.current_status !== 'PENDING') statusClass = 'status-transit';
     
     const badge = document.getElementById('statusBadge');
@@ -972,7 +973,7 @@ function showShip(data) {
     }
 
     // Role-based buttons
-    const btns = getRoleButtons();
+    const btns = getRoleButtons(s.direction_code);
     document.getElementById('actionBtns').innerHTML = btns.map(b => {
         if (b.type === 'delivery') {
             return `
@@ -1010,55 +1011,8 @@ function showShip(data) {
 }
 
 // Get role-based buttons
-function getRoleButtons() {
-    const buttons = [];
-    
-    // SVG Icons
-    const warehouseIcon = `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-        </svg>
-    `;
-    
-    const airportIcon = `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-        </svg>
-    `;
-    
-    const receivedIcon = `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-    `;
-    
-    // BD group users: Show BD buttons only (NO "Received in HK")
-    if (userRole.includes('BD_') || userRole === 'DRIVER') {
-        buttons.push(
-            { status: 'RECEIVED_AT_BD', label: 'Received in BD Warehouse', icon: warehouseIcon },
-            { status: 'HANDED_TO_AIRLINE', label: 'Received in BD Airport', icon: airportIcon }
-        );
-        // BD users do NOT see Delivery Proof button
-    } 
-    // HK group users: Show HK buttons + Delivery Proof
-    else if (userRole.includes('HK_')) {
-        buttons.push(
-            { status: 'ARRIVED_AT_HK', label: 'Received in HK', icon: receivedIcon }
-        );
-        buttons.push({ type: 'delivery', label: 'Delivery Proof' });
-    } 
-    // Admin/Other users: Show all buttons
-    else {
-        buttons.push(
-            { status: 'RECEIVED_AT_BD', label: 'Received in BD Warehouse', icon: warehouseIcon },
-            { status: 'HANDED_TO_AIRLINE', label: 'Received in BD Airport', icon: airportIcon },
-            { status: 'ARRIVED_AT_HK', label: 'Received in HK', icon: receivedIcon }
-        );
-        buttons.push({ type: 'delivery', label: 'Delivery Proof' });
-    }
-    
-    return buttons;
-}
+// getRoleButtons(directionCode) and DESTINATION_CONFIG now live in
+// /static/js/shipment_status_buttons.js (shared with shipments.html)
 
 // Delivery Proof Modal
 let canvas, ctx, isDrawing = false;

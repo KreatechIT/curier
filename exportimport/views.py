@@ -126,12 +126,15 @@ def scan_shipment(request, awb):
             }, status=404)
     
     try:
-        # Try to get by ID first (if awb is numeric), then by AWB number
-        if awb.isdigit():
-            shipment = get_object_or_404(Shipment, id=int(awb))
-        else:
-            shipment = get_object_or_404(Shipment, awb_number=awb)
-        
+        # Try by AWB number first (covers third-party AWBs that are purely
+        # numeric), then fall back to internal ID (used by list/table views
+        # that pass the shipment's database ID instead of its AWB).
+        shipment = Shipment.objects.filter(awb_number=awb).first()
+        if not shipment and awb.isdigit():
+            shipment = Shipment.objects.filter(id=int(awb)).first()
+        if not shipment:
+            raise Shipment.DoesNotExist
+
         # Get next possible actions based on current status
         next_actions = get_next_actions(shipment)
         
@@ -174,6 +177,7 @@ def scan_shipment(request, awb):
                 'id': shipment.id,
                 'awb_number': shipment.awb_number,
                 'source': shipment.source,
+                'direction_code': shipment.direction,
                 'direction': shipment.get_direction_display(),
                 'current_status': shipment.current_status,
                 'status_display': shipment.get_current_status_display(),
@@ -324,10 +328,22 @@ def create_delivery_proof(request, shipment_id):
         delivery_proof.save()
         
         # Update shipment status to delivered
-        if shipment.direction == 'BD_TO_HK':
-            shipment.current_status = 'DELIVERED_IN_HK'
-        else:
+        delivered_status_by_direction = {
+            'BD_TO_HK': 'DELIVERED_IN_HK',
+            'BD_TO_UK': 'DELIVERED_IN_UK',
+            'BD_TO_CN': 'DELIVERED_IN_CN',
+        }
+        if shipment.direction in delivered_status_by_direction:
+            shipment.current_status = delivered_status_by_direction[shipment.direction]
+        elif shipment.direction:
+            # Reverse (HK -> BD) workflow; 'DELIVERED' is its terminal status
             shipment.current_status = 'DELIVERED'
+        else:
+            # No direction set (e.g. a third-party HAWB registered with just an
+            # AWB number) - default to the BD -> HK leg, matching the model's
+            # default shipper/recipient countries, rather than the invalid
+            # generic 'DELIVERED' status.
+            shipment.current_status = 'DELIVERED_IN_HK'
         shipment.save()
         
         # Create tracking event
@@ -1946,7 +1962,9 @@ def get_next_actions(shipment):
             'IN_EXPORT_MANIFEST': ['HANDED_TO_AIRLINE'],
             'HANDED_TO_AIRLINE': ['IN_TRANSIT_TO_HK'],
             'IN_TRANSIT_TO_HK': ['ARRIVED_AT_HK'],
-            'ARRIVED_AT_HK': ['DELIVERED_IN_HK'],
+            'ARRIVED_AT_HK': ['RECEIVED_AT_HK_WAREHOUSE'],
+            'RECEIVED_AT_HK_WAREHOUSE': ['OUT_FOR_DELIVERY_HK'],
+            'OUT_FOR_DELIVERY_HK': ['DELIVERED_IN_HK'],
         }
     # HK → BD workflow
     else:

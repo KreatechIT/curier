@@ -62,10 +62,12 @@ class Shipment(models.Model):
         ('IN_EXPORT_MANIFEST', 'In Export Manifest'),
         ('HANDED_TO_AIRLINE', 'Handed to Airline'),
         ('IN_TRANSIT_TO_HK', 'In Transit to Hong Kong'),
-        ('ARRIVED_AT_HK', 'Arrived at Hong Kong'),
+        ('ARRIVED_AT_HK', 'Flight Landed in Hong Kong'),
+        ('RECEIVED_AT_HK_WAREHOUSE', 'Received in Hong Kong Warehouse'),
+        ('OUT_FOR_DELIVERY_HK', 'On the Way to Delivery'),
         ('DELIVERED_IN_HK', 'Delivered in Hong Kong'),
     ]
-    
+
     STATUS_BD_TO_UK = [
         ('PENDING', 'PENDING'),
         ('BOOKED', 'Booked'),
@@ -75,10 +77,12 @@ class Shipment(models.Model):
         ('IN_EXPORT_MANIFEST', 'In Export Manifest'),
         ('HANDED_TO_AIRLINE', 'Handed to Airline'),
         ('IN_TRANSIT_TO_UK', 'In Transit to United Kingdom'),
-        ('ARRIVED_AT_UK', 'Arrived at United Kingdom'),
+        ('ARRIVED_AT_UK', 'Flight Landed in United Kingdom'),
+        ('RECEIVED_AT_UK_WAREHOUSE', 'Received in United Kingdom Warehouse'),
+        ('OUT_FOR_DELIVERY_UK', 'On the Way to Delivery'),
         ('DELIVERED_IN_UK', 'Delivered in United Kingdom'),
     ]
-    
+
     STATUS_BD_TO_CN = [
         ('PENDING', 'PENDING'),
         ('BOOKED', 'Booked'),
@@ -88,7 +92,9 @@ class Shipment(models.Model):
         ('IN_EXPORT_MANIFEST', 'In Export Manifest'),
         ('HANDED_TO_AIRLINE', 'Handed to Airline'),
         ('IN_TRANSIT_TO_CN', 'In Transit to China'),
-        ('ARRIVED_AT_CN', 'Arrived at China'),
+        ('ARRIVED_AT_CN', 'Flight Landed in China'),
+        ('RECEIVED_AT_CN_WAREHOUSE', 'Received in China Warehouse'),
+        ('OUT_FOR_DELIVERY_CN', 'On the Way to Delivery'),
         ('DELIVERED_IN_CN', 'Delivered in China'),
     ]
     
