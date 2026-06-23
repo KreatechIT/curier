@@ -683,7 +683,7 @@ def create_third_party_hawb(request):
         TrackingEvent.objects.create(
             shipment=shipment,
             status='BOOKED',
-            description=f'Third-party HAWB {awb_number} added manually by staff',
+            description='Parcel already picked up',
             location='Bangladesh Warehouse',
             updated_by=request.user
         )

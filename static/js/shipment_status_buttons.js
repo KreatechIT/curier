@@ -31,36 +31,16 @@ function getRoleButtons(directionCode) {
         </svg>
     `;
 
-    // BD group users: Show BD buttons only (NO destination-side buttons)
-    if (userRole.includes('BD_') || userRole === 'DRIVER') {
-        buttons.push(
-            { status: 'RECEIVED_AT_BD', label: 'Received in BD Warehouse', icon: warehouseIcon },
-            { status: 'HANDED_TO_AIRLINE', label: 'Received in BD Airport', icon: airportIcon }
-        );
-        // BD users do NOT see Delivery Proof button
-    }
-    // HK group users: Show destination-side buttons + Delivery Proof
-    else if (userRole.includes('HK_')) {
-        buttons.push(
-            { status: dest.inTransit, label: dest.inTransitLabel, icon: airportIcon },
-            { status: dest.arrived, label: dest.arrivedLabel, icon: receivedIcon },
-            { status: dest.warehouse, label: dest.warehouseLabel, icon: warehouseIcon },
-            { status: dest.outForDelivery, label: dest.outForDeliveryLabel, icon: airportIcon }
-        );
-        buttons.push({ type: 'delivery', label: 'Delivery Proof' });
-    }
-    // Admin/Other users: Show all buttons
-    else {
-        buttons.push(
-            { status: 'RECEIVED_AT_BD', label: 'Received in BD Warehouse', icon: warehouseIcon },
-            { status: 'HANDED_TO_AIRLINE', label: 'Received in BD Airport', icon: airportIcon },
-            { status: dest.inTransit, label: dest.inTransitLabel, icon: airportIcon },
-            { status: dest.arrived, label: dest.arrivedLabel, icon: receivedIcon },
-            { status: dest.warehouse, label: dest.warehouseLabel, icon: warehouseIcon },
-            { status: dest.outForDelivery, label: dest.outForDeliveryLabel, icon: airportIcon }
-        );
-        buttons.push({ type: 'delivery', label: 'Delivery Proof' });
-    }
+    // Show all buttons to every staff member, regardless of role
+    buttons.push(
+        { status: 'RECEIVED_AT_BD', label: 'Received in BD Warehouse', icon: warehouseIcon },
+        { status: 'HANDED_TO_AIRLINE', label: 'Received in BD Airport', icon: airportIcon },
+        { status: dest.inTransit, label: dest.inTransitLabel, icon: airportIcon },
+        { status: dest.arrived, label: dest.arrivedLabel, icon: receivedIcon },
+        { status: dest.warehouse, label: dest.warehouseLabel, icon: warehouseIcon },
+        { status: dest.outForDelivery, label: dest.outForDeliveryLabel, icon: airportIcon }
+    );
+    buttons.push({ type: 'delivery', label: 'Delivery Proof' });
 
     return buttons;
 }
